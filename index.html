@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Snapbooth</title>
+<meta name="description" content="A song-themed photobooth. Pick a vibe, add a filter, save the strip.">
+<style>
+:root{--a:#7b6cf6;--bg:#f5f5f7;--card:#fff;--ink:#1d1d1f;--mute:#6e6e73;--line:#d2d2d7;color-scheme:light dark}
+@media(prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--ink:#f5f5f7;--mute:#98989d;--line:#38383a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:1080px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:clamp(40px,7vw,64px);letter-spacing:-.035em;line-height:1.03;margin:0 0 8px;font-weight:700}
+.sub{color:var(--mute);margin:0 0 28px;font-size:19px}
+.grid{display:grid;gap:24px;grid-template-columns:1fr}
+@media(min-width:880px){.grid{grid-template-columns:1.35fr 1fr;align-items:start}}
+.card{background:var(--card);border-radius:28px;padding:16px}
+.view{position:relative;aspect-ratio:4/3;border-radius:20px;overflow:hidden;background:#000}
+.view video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+#cd{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:min(34vw,200px);font-weight:700;text-shadow:0 4px 40px rgba(0,0,0,.5);pointer-events:none}
+#fl{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#fl.on{animation:fl .35s ease-out}
+@keyframes fl{from{opacity:.9}to{opacity:0}}
+#msg{position:absolute;inset:0;display:grid;place-content:center;gap:12px;text-align:center;color:#fff;padding:24px;background:rgba(0,0,0,.6)}
+#msg[hidden]{display:none}
+.row{display:flex;gap:8px;overflow-x:auto;padding:14px 2px 4px;scrollbar-width:none}
+.row::-webkit-scrollbar{display:none}
+button{font:inherit;color:inherit;cursor:pointer;border:0;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible{outline:3px solid var(--a);outline-offset:2px}
+.chip{flex:none;padding:8px 16px;border-radius:99px;background:var(--bg);font-size:15px;font-weight:500}
+.chip[aria-pressed=true]{background:var(--a);color:#fff}
+.bar{display:flex;align-items:center;justify-content:center;gap:20px;padding:14px 0 6px}
+#go{width:76px;height:76px;border-radius:50%;background:var(--a);box-shadow:0 0 0 5px var(--card),0 0 0 8px var(--a);transition:transform .15s}
+#go:active{transform:scale(.92)}
+#go:disabled{opacity:.45}
+.btn{padding:12px 20px;border-radius:99px;background:var(--bg);font-weight:600}
+.btn.p{background:var(--a);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+h2{font-size:21px;margin:4px 4px 0;letter-spacing:-.01em}
+.songs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:12px 0 4px}
+.song{text-align:left;padding:12px 14px;border-radius:18px;background:var(--bg);border-left:6px solid var(--c)}
+.song b{display:block;font-size:15px;line-height:1.25}
+.song span{font-size:13px;color:var(--mute)}
+.song[aria-pressed=true]{background:var(--c);color:var(--t)}
+.song[aria-pressed=true] span{color:inherit;opacity:.8}
+input{width:100%;font:inherit;padding:12px 16px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:inherit;margin-top:12px}
+.hint{font-size:13px;color:var(--mute);margin:8px 4px 0}
+#strip{width:100%;height:auto;display:block;border-radius:12px;margin-top:16px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.act{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+@media(prefers-reduced-motion:reduce){#fl.on{animation:none}*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+<h1>Snapbooth</h1>
+<p class="sub">Pick a song. Strike four poses. Save the strip.</p>
+<div class="grid">
+<section class="card" aria-label="Camera">
+<div class="view"><video id="v" autoplay playsinline muted></video><div id="fl"></div><div id="cd" aria-live="assertive"></div>
+<div id="msg" hidden><p id="mt"></p><button class="btn p" id="retry">Allow camera</button></div></div>
+<div class="row" id="filters" role="group" aria-label="Filters"></div>
+<div class="bar"><button id="go" aria-label="Take 4 photos"></button></div>
+<p class="hint" style="text-align:center">Four photos, three seconds apart</p>
+</section>
+<section class="card" aria-label="Song and strip">
+<h2>Song vibe</h2>
+<div class="songs" id="songs"></div>
+<input id="cap" maxlength="40" placeholder="Add your own caption" aria-label="Caption">
+<p class="hint">Captions here are original lines. Type your own words to put on the strip.</p>
+<canvas id="strip" aria-label="Photo strip preview"></canvas>
+<div class="act"><button class="btn p" id="save" disabled>Save strip</button><button class="btn" id="share" hidden disabled>Share</button><button class="btn" id="again" disabled>Retake</button></div>
+</section>
+</div>
+</main>
+<script>
+const T=[
+{t:'drivers license',a:'Olivia Rodrigo',c:'Empty roads, full heart',k:'#7b6cf6',f:'dusk'},
+{t:'good 4 u',a:'Olivia Rodrigo',c:'Calm face, loud mind',k:'#ff3b8d',f:'vivid'},
+{t:'vampire',a:'Olivia Rodrigo',c:'Back out after dark',k:'#b3122e',f:'noir'},
+{t:'bad idea right?',a:'Olivia Rodrigo',c:'Ok but what if we did',k:'#ff9f0a',f:'film'},
+{t:'get him back!',a:'Olivia Rodrigo',c:'Plot twist, party of me',k:'#34c759',f:'vivid'},
+{t:'Flowers',a:'Miley Cyrus',c:'Party of one, still glowing',k:'#ffd60a',f:'dreamy'},
+{t:'Anti-Hero',a:'Taylor Swift',c:'Main character, side quest',k:'#5e5ce6',f:'mono'},
+{t:'Cruel Summer',a:'Taylor Swift',c:'Sunburnt and unbothered',k:'#ff453a',f:'film'},
+{t:'As It Was',a:'Harry Styles',c:'Spinning in the kitchen',k:'#ff6482',f:'dreamy'},
+{t:'Espresso',a:'Sabrina Carpenter',c:'Caffeinated, camera ready',k:'#c8a27a',f:'film'},
+{t:'Blinding Lights',a:'The Weeknd',c:'Neon after midnight',k:'#0a84ff',f:'dusk'}];
+const F={None:'none',Mono:'grayscale(1) contrast(1.1)',Film:'sepia(.35) contrast(1.1) saturate(1.2) brightness(1.05)',Dreamy:'brightness(1.1) saturate(1.3) contrast(.9) blur(.6px)',Vivid:'saturate(1.7) contrast(1.15)',Noir:'grayscale(1) contrast(1.6) brightness(.9)',Dusk:'hue-rotate(-15deg) saturate(1.3) sepia(.2) brightness(.95)'};
+const $=id=>document.getElementById(id),wait=ms=>new Promise(r=>setTimeout(r,ms));
+const v=$('v'),strip=$('strip'),cap=$('cap'),go=$('go');
+let ti=0,fk='Dusk',stream=null,busy=false;const shots=[];
+function lum(h){const n=parseInt(h.slice(1),16);return(.299*(n>>16)+.587*(n>>8&255)+.114*(n&255))/255}
+function fontStack(w,s,i){return(i?'italic ':'')+w+' '+s+'px -apple-system,Inter,system-ui,sans-serif'}
+function drawStrip(){
+ const t=T[ti],W=640,P=40,pw=560,ph=420,G=24,H=P+4*ph+3*G+170,x=strip.getContext('2d');
+ strip.width=W;strip.height=H;x.fillStyle=t.k;x.fillRect(0,0,W,H);
+ for(let i=0;i<4;i++){const y=P+i*(ph+G);if(shots[i])x.drawImage(shots[i],P,y,pw,ph);else{x.fillStyle='rgba(255,255,255,.25)';x.fillRect(P,y,pw,ph)}}
+ x.fillStyle=lum(t.k)>.62?'#1d1d1f':'#fff';x.textAlign='center';
+ const y=P+4*ph+3*G+56;
+ x.font=fontStack(700,38);x.fillText(t.t,W/2,y);
+ x.globalAlpha=.8;x.font=fontStack(500,22);x.fillText(t.a,W/2,y+34);
+ x.globalAlpha=1;x.font=fontStack(500,24,1);x.fillText(cap.value.trim()||t.c,W/2,y+78);
+}
+function setUI(){
+ const done=shots.length===4;
+ go.disabled=busy||!stream;$('save').disabled=$('share').disabled=!done;$('again').disabled=busy||!shots.length;
+ document.documentElement.style.setProperty('--a',T[ti].k);
+}
+function pick(i){
+ ti=i;fk=T[i].f[0].toUpperCase()+T[i].f.slice(1);
+ document.querySelectorAll('.song').forEach((b,j)=>b.setAttribute('aria-pressed',j===i));
+ document.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed',b.textContent===fk));
+ applyFilter();drawStrip();setUI();
+}
+function applyFilter(){v.style.filter=F[fk]}
+function grab(){
+ const c=document.createElement('canvas');c.width=560;c.height=420;const x=c.getContext('2d');
+ const vw=v.videoWidth,vh=v.videoHeight;let sw=vw,sh=vh,sx=0,sy=0;
+ if(vw/vh>4/3){sw=vh*4/3;sx=(vw-sw)/2}else{sh=vw*3/4;sy=(vh-sh)/2}
+ if('filter' in x)x.filter=F[fk];
+ x.translate(560,0);x.scale(-1,1);x.drawImage(v,sx,sy,sw,sh,0,0,560,420);
+ return c;
+}
+async function run(){
+ if(busy||!stream)return;busy=true;shots.length=0;drawStrip();setUI();
+ for(let i=0;i<4;i++){
+  for(let n=3;n>0;n--){$('cd').textContent=n;await wait(900)}
+  $('cd').textContent='';const f=$('fl');f.classList.remove('on');void f.offsetWidth;f.classList.add('on');
+  shots.push(grab());drawStrip();await wait(500);
+ }
+ busy=false;setUI();
+}
+async function cam(){
+ $('msg').hidden=true;
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:960}},audio:false});
+  v.srcObject=stream;
+ }catch(e){
+  stream=null;$('mt').textContent=navigator.mediaDevices?'Camera access is blocked. Allow it in your browser settings, then tap Allow camera.':'Camera needs HTTPS. Open the https:// version of this page.';$('msg').hidden=false;
+ }
+ setUI();
+}
+function blob(){return new Promise(r=>strip.toBlob(r,'image/png'))}
+$('save').onclick=async()=>{const b=await blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='snapbooth-'+T[ti].t.replace(/\W+/g,'-')+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+if(navigator.share&&navigator.canShare)$('share').hidden=false;
+$('share').onclick=async()=>{const f=new File([await blob()],'snapbooth.png',{type:'image/png'});if(navigator.canShare({files:[f]}))try{await navigator.share({files:[f],title:'Snapbooth'})}catch(e){}};
+$('again').onclick=()=>{shots.length=0;drawStrip();setUI()};
+$('retry').onclick=cam;go.onclick=run;cap.oninput=drawStrip;
+Object.keys(F).forEach(k=>{const b=document.createElement('button');b.className='chip';b.textContent=k;b.onclick=()=>{fk=k;document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c===b));applyFilter()};$('filters').appendChild(b)});
+T.forEach((t,i)=>{const b=document.createElement('button');b.className='song';b.style.setProperty('--c',t.k);b.style.setProperty('--t',lum(t.k)>.62?'#1d1d1f':'#fff');b.innerHTML='<b></b><span></span>';b.firstChild.textContent=t.t;b.lastChild.textContent=t.a;b.onclick=()=>pick(i);$('songs').appendChild(b)});
+pick(0);cam();
+</script>
+</body>
+</html>
