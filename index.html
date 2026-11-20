@@ -1,78 +1,106 @@
 <!doctype html>
-<html lang="en">
+<html lang='en'>
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1,viewport-fit=cover'>
+<meta name='theme-color' content='#efe8d8'>
 <title>Snapbooth</title>
-<meta name="description" content="A song-themed photobooth. Pick a vibe, add a filter, save the strip.">
+<meta name='description' content='A song-themed photobooth. Pick a vibe, add a filter, keep the strip.'>
+<link rel='preconnect' href='https://fonts.googleapis.com'><link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
+<link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,700&display=swap'>
+<script src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js'></script>
 <style>
-:root{--a:#7b6cf6;--bg:#f5f5f7;--card:#fff;--ink:#1d1d1f;--mute:#6e6e73;--line:#d2d2d7;color-scheme:light dark}
-@media(prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--ink:#f5f5f7;--mute:#98989d;--line:#38383a}}
+:root{--a:#7b6cf6;--paper:#fbf8f1;--desk:#efe8d8;--edge:#e0d5bc;--ink:#2b2418;--mute:#7a6e58;color-scheme:light}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-main{max-width:1080px;margin:0 auto;padding:32px 20px 64px}
-h1{font-size:clamp(40px,7vw,64px);letter-spacing:-.035em;line-height:1.03;margin:0 0 8px;font-weight:700}
-.sub{color:var(--mute);margin:0 0 28px;font-size:19px}
-.grid{display:grid;gap:24px;grid-template-columns:1fr}
-@media(min-width:880px){.grid{grid-template-columns:1.35fr 1fr;align-items:start}}
-.card{background:var(--card);border-radius:28px;padding:16px}
-.view{position:relative;aspect-ratio:4/3;border-radius:20px;overflow:hidden;background:#000}
+body{margin:0;color:var(--ink);background:var(--desk) radial-gradient(#d8cdb3 1px,transparent 1.2px) 0 0/22px 22px;font:17px/1.45 'DM Sans',system-ui,sans-serif;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+main{max-width:1080px;margin:0 auto;padding:28px 20px 72px}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:24px}
+h1{font:700 clamp(38px,8vw,60px)/1 Fraunces,Georgia,serif;letter-spacing:-.02em;margin:0 0 8px}
+h2{font:700 22px Fraunces,Georgia,serif;margin:2px 0 0}
+.sub{margin:0;color:var(--mute)}
+.grid{display:grid;gap:28px;grid-template-columns:1fr}
+@media(min-width:880px){.grid{grid-template-columns:1.3fr 1fr;align-items:start}}
+.card{background:var(--paper);border:1px solid var(--edge);border-radius:6px;padding:18px;box-shadow:0 1px 1px rgba(70,50,15,.1),4px 5px 0 -1px #f4eee0,4px 5px 0 0 var(--edge)}
+.frame{position:relative;background:#fff;padding:12px 12px 12px;border-radius:3px;box-shadow:0 6px 18px rgba(70,50,15,.2)}
+.frame:before,.frame:after{content:'';position:absolute;width:84px;height:26px;background:var(--a);opacity:.7;top:-12px;z-index:2}
+.frame:before{left:-18px;transform:rotate(-35deg)}.frame:after{right:-18px;transform:rotate(35deg)}
+.view{position:relative;aspect-ratio:4/3;overflow:hidden;background:#1b1710}
 .view video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
-#cd{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:min(34vw,200px);font-weight:700;text-shadow:0 4px 40px rgba(0,0,0,.5);pointer-events:none}
+#cd{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:700 min(34vw,190px) Fraunces,serif;text-shadow:0 4px 40px rgba(0,0,0,.55);pointer-events:none}
 #fl{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
 #fl.on{animation:fl .35s ease-out}
 @keyframes fl{from{opacity:.9}to{opacity:0}}
-#msg{position:absolute;inset:0;display:grid;place-content:center;gap:12px;text-align:center;color:#fff;padding:24px;background:rgba(0,0,0,.6)}
+#msg{position:absolute;inset:0;display:grid;place-content:center;gap:12px;text-align:center;color:#fff;padding:20px;background:rgba(27,23,16,.75)}
 #msg[hidden]{display:none}
-.row{display:flex;gap:8px;overflow-x:auto;padding:14px 2px 4px;scrollbar-width:none}
+.row{display:flex;gap:8px;overflow-x:auto;padding:18px 2px 6px;scrollbar-width:none;scroll-snap-type:x proximity}
 .row::-webkit-scrollbar{display:none}
 button{font:inherit;color:inherit;cursor:pointer;border:0;-webkit-tap-highlight-color:transparent}
-button:focus-visible,input:focus-visible{outline:3px solid var(--a);outline-offset:2px}
-.chip{flex:none;padding:8px 16px;border-radius:99px;background:var(--bg);font-size:15px;font-weight:500}
-.chip[aria-pressed=true]{background:var(--a);color:#fff}
-.bar{display:flex;align-items:center;justify-content:center;gap:20px;padding:14px 0 6px}
-#go{width:76px;height:76px;border-radius:50%;background:var(--a);box-shadow:0 0 0 5px var(--card),0 0 0 8px var(--a);transition:transform .15s}
-#go:active{transform:scale(.92)}
-#go:disabled{opacity:.45}
-.btn{padding:12px 20px;border-radius:99px;background:var(--bg);font-weight:600}
-.btn.p{background:var(--a);color:#fff}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid var(--a);outline-offset:2px}
+.chip{flex:none;min-height:44px;padding:8px 18px;border-radius:99px;background:#fff;border:1px solid var(--edge);font-weight:500;scroll-snap-align:start}
+.chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.bar{display:flex;justify-content:center;padding:14px 0 4px}
+#go{width:84px;height:84px;border-radius:50%;background:var(--a);box-shadow:0 0 0 5px var(--paper),0 0 0 7px var(--a),0 8px 16px rgba(70,50,15,.3);transition:transform .15s}
+#go:active{transform:scale(.93)}#go:disabled{opacity:.4}
+.btn{min-height:44px;padding:10px 20px;border-radius:10px;background:#fff;border:1px solid var(--edge);font-weight:700}
+.btn.p{background:var(--a);border-color:var(--a);color:#fff}
+.btn.ghost{background:transparent}
 .btn:disabled{opacity:.4;cursor:default}
-h2{font-size:21px;margin:4px 4px 0;letter-spacing:-.01em}
-.songs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:12px 0 4px}
-.song{text-align:left;padding:12px 14px;border-radius:18px;background:var(--bg);border-left:6px solid var(--c)}
+.songs{display:flex;gap:10px;overflow-x:auto;padding:14px 4px 10px;scroll-snap-type:x proximity;scrollbar-width:none}
+.songs::-webkit-scrollbar{display:none}
+@media(min-width:880px){.songs{display:grid;grid-template-columns:repeat(2,1fr);overflow:visible}}
+.song{flex:none;width:170px;min-height:64px;text-align:left;padding:10px 12px 10px 14px;background:#fff;border:1px solid var(--edge);border-left:8px solid var(--c);border-radius:4px;box-shadow:0 2px 4px rgba(70,50,15,.12);scroll-snap-align:start}
+@media(min-width:880px){.song{width:auto}}
 .song b{display:block;font-size:15px;line-height:1.25}
 .song span{font-size:13px;color:var(--mute)}
-.song[aria-pressed=true]{background:var(--c);color:var(--t)}
-.song[aria-pressed=true] span{color:inherit;opacity:.8}
-input{width:100%;font:inherit;padding:12px 16px;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:inherit;margin-top:12px}
-.hint{font-size:13px;color:var(--mute);margin:8px 4px 0}
-#strip{width:100%;height:auto;display:block;border-radius:12px;margin-top:16px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.song[aria-pressed=true]{background:var(--c);color:var(--t);border-color:var(--c);transform:rotate(-1.2deg)}
+.song[aria-pressed=true] span{color:inherit;opacity:.85}
+.links{margin:2px 4px 0;font-size:14px;color:var(--mute)}.links a{color:var(--ink);font-weight:700;margin-left:10px}
+input{width:100%;font:inherit;padding:12px 14px;border-radius:8px;border:1px solid var(--edge);background:#fff;color:inherit;margin-top:6px}
+#cap{margin-top:14px}
+.hint{font-size:13px;color:var(--mute);margin:8px 2px 0}
+#strip{width:100%;height:auto;display:block;margin-top:16px;box-shadow:0 8px 22px rgba(70,50,15,.25)}
 .act{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+dialog{border:1px solid var(--edge);border-radius:10px;background:var(--paper);color:var(--ink);padding:22px;width:min(440px,calc(100% - 28px));max-height:88dvh;overflow:auto;box-shadow:0 20px 60px rgba(40,28,8,.35)}
+dialog::backdrop{background:rgba(43,36,24,.45)}
+@media(max-width:600px){dialog{margin:auto 0 0;width:100%;max-width:100%;border-radius:18px 18px 0 0;padding-bottom:calc(22px + env(safe-area-inset-bottom))}}
+label{display:block;margin-top:12px;font-weight:700;font-size:15px}
+.err{color:#b3261e;min-height:1.4em;margin:8px 0 0;font-size:14px}
+#gbox{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px;margin-top:14px}
+figure{margin:0;display:grid;gap:6px;align-content:start}figure img{width:100%;display:block;box-shadow:0 4px 12px rgba(70,50,15,.25);background:#efe7d4;aspect-ratio:640/1900}
+figcaption{font-size:13px;line-height:1.3}figcaption b{display:block}
+#gal{width:min(760px,calc(100% - 28px))}
+.mini{display:flex;gap:6px}.mini .btn{min-height:36px;padding:4px 12px;font-size:13px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:calc(100% - 32px);text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%)}
+@media(max-width:600px){main{padding:18px 14px 56px}.card{padding:14px}.top{margin-bottom:18px}.sub{font-size:15px}}
 @media(prefers-reduced-motion:reduce){#fl.on{animation:none}*{transition:none!important}}
 </style>
 </head>
 <body>
 <main>
-<h1>Snapbooth</h1>
-<p class="sub">Pick a song. Strike four poses. Save the strip.</p>
-<div class="grid">
-<section class="card" aria-label="Camera">
-<div class="view"><video id="v" autoplay playsinline muted></video><div id="fl"></div><div id="cd" aria-live="assertive"></div>
-<div id="msg" hidden><p id="mt"></p><button class="btn p" id="retry">Allow camera</button></div></div>
-<div class="row" id="filters" role="group" aria-label="Filters"></div>
-<div class="bar"><button id="go" aria-label="Take 4 photos"></button></div>
-<p class="hint" style="text-align:center">Four photos, three seconds apart</p>
+<header class='top'><div><h1>Snapbooth</h1><p class='sub'>Pick a song. Strike four poses. Keep the strip.</p></div><div class='mini'><button class='btn' id='acct'>Sign in</button><button class='btn ghost' id='out' hidden>Sign out</button></div></header>
+<div class='grid'>
+<section class='card' aria-label='Camera'>
+<div class='frame'><div class='view'><video id='v' autoplay playsinline muted></video><div id='fl'></div><div id='cd' aria-live='assertive'></div>
+<div id='msg' hidden><p id='mt'></p><button class='btn p' id='retry'>Allow camera</button></div></div></div>
+<div class='row' id='filters' role='group' aria-label='Filters'></div>
+<div class='bar'><button id='go' aria-label='Take 4 photos'></button></div>
+<p class='hint' style='text-align:center'>Four photos, three seconds apart</p>
 </section>
-<section class="card" aria-label="Song and strip">
+<section class='card' aria-label='Song and strip'>
 <h2>Song vibe</h2>
-<div class="songs" id="songs"></div>
-<input id="cap" maxlength="40" placeholder="Add your own caption" aria-label="Caption">
-<p class="hint">Captions here are original lines. Type your own words to put on the strip.</p>
-<canvas id="strip" aria-label="Photo strip preview"></canvas>
-<div class="act"><button class="btn p" id="save" disabled>Save strip</button><button class="btn" id="share" hidden disabled>Share</button><button class="btn" id="again" disabled>Retake</button></div>
+<div class='songs' id='songs'></div>
+<p class='links'>Play this song:<a id='sp' target='_blank' rel='noopener'>Spotify</a><a id='yt' target='_blank' rel='noopener'>YouTube Music</a></p>
+<input id='cap' maxlength='40' placeholder='Write your own caption' aria-label='Caption'>
+<canvas id='strip' aria-label='Photo strip preview'></canvas>
+<div class='act'><button class='btn p' id='cloud' disabled>Save to profile</button><button class='btn' id='save' disabled>Download</button><button class='btn' id='share' hidden disabled>Share</button><button class='btn ghost' id='again' disabled>Retake</button></div>
 </section>
 </div>
 </main>
+<dialog id='auth'><form id='af'><h2 id='at'>Sign in</h2><p class='hint'>An account keeps your strips in your own cloud gallery. Photos stay on this device until you save one.</p><label>Email<input id='em' type='email' autocomplete='email' required></label><label>Password<input id='pw' type='password' minlength='6' autocomplete='current-password' required></label><p class='err' id='ae' role='alert'></p><div class='act'><button class='btn p' id='as'>Sign in</button><button class='btn' type='button' id='am'>Create account</button><button class='btn ghost' type='button' id='ax'>Cancel</button></div></form></dialog>
+<dialog id='ask'><h2>Save this strip to your profile?</h2><p class='hint' id='askt'></p><div class='act'><button class='btn p' id='yes'>Save to profile</button><button class='btn ghost' id='no'>Not now</button></div></dialog>
+<dialog id='gal'><h2>My strips</h2><div id='gbox'></div><div class='act'><button class='btn' id='gx'>Close</button></div></dialog>
+<div id='toast' role='status'></div>
 <script>
 const T=[
 {t:'drivers license',a:'Olivia Rodrigo',c:'Empty roads, full heart',k:'#7b6cf6',f:'dusk'},
@@ -89,31 +117,36 @@ const T=[
 const F={None:'none',Mono:'grayscale(1) contrast(1.1)',Film:'sepia(.35) contrast(1.1) saturate(1.2) brightness(1.05)',Dreamy:'brightness(1.1) saturate(1.3) contrast(.9) blur(.6px)',Vivid:'saturate(1.7) contrast(1.15)',Noir:'grayscale(1) contrast(1.6) brightness(.9)',Dusk:'hue-rotate(-15deg) saturate(1.3) sepia(.2) brightness(.95)'};
 const $=id=>document.getElementById(id),wait=ms=>new Promise(r=>setTimeout(r,ms));
 const v=$('v'),strip=$('strip'),cap=$('cap'),go=$('go');
-let ti=0,fk='Dusk',stream=null,busy=false;const shots=[];
+const sb=window.supabase?supabase.createClient('https://xpqrroetdrrnkbbevzbv.supabase.co','sb_publishable_Fd73gR2c71B4TapPq-clIA_5Zfu5lRo'):null;
+let ti=0,fk='Dusk',stream=null,busy=false,user=null,mode='in',pending=false;const shots=[];
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),3200)}
 function lum(h){const n=parseInt(h.slice(1),16);return(.299*(n>>16)+.587*(n>>8&255)+.114*(n&255))/255}
-function fontStack(w,s,i){return(i?'italic ':'')+w+' '+s+'px -apple-system,Inter,system-ui,sans-serif'}
+const fonts=()=>Promise.all(['700 38px Fraunces','500 22px DM Sans','600 36px Caveat'].map(f=>document.fonts.load(f))).catch(()=>{});
 function drawStrip(){
- const t=T[ti],W=640,P=40,pw=560,ph=420,G=24,H=P+4*ph+3*G+170,x=strip.getContext('2d');
- strip.width=W;strip.height=H;x.fillStyle=t.k;x.fillRect(0,0,W,H);
- for(let i=0;i<4;i++){const y=P+i*(ph+G);if(shots[i])x.drawImage(shots[i],P,y,pw,ph);else{x.fillStyle='rgba(255,255,255,.25)';x.fillRect(P,y,pw,ph)}}
- x.fillStyle=lum(t.k)>.62?'#1d1d1f':'#fff';x.textAlign='center';
- const y=P+4*ph+3*G+56;
- x.font=fontStack(700,38);x.fillText(t.t,W/2,y);
- x.globalAlpha=.8;x.font=fontStack(500,22);x.fillText(t.a,W/2,y+34);
- x.globalAlpha=1;x.font=fontStack(500,24,1);x.fillText(cap.value.trim()||t.c,W/2,y+78);
+ const t=T[ti],W=640,P=56,X=48,pw=544,ph=408,G=36,H=P+4*ph+3*G+200,x=strip.getContext('2d');
+ strip.width=W;strip.height=H;x.fillStyle='#fbf7ee';x.fillRect(0,0,W,H);
+ x.save();x.translate(W/2,22);x.rotate(-.04);x.globalAlpha=.8;x.fillStyle=t.k;x.fillRect(-100,-16,200,38);x.restore();
+ for(let i=0;i<4;i++){const y=P+i*(ph+G);
+  x.save();x.shadowColor='rgba(70,50,15,.28)';x.shadowBlur=12;x.shadowOffsetY=4;x.fillStyle='#fff';x.fillRect(X-8,y-8,pw+16,ph+16);x.restore();
+  if(shots[i])x.drawImage(shots[i],X,y,pw,ph);else{x.fillStyle='#efe7d4';x.fillRect(X,y,pw,ph)}}
+ const y0=P+4*ph+3*G+50;x.textAlign='center';x.fillStyle='#2b2418';
+ x.font='700 38px Fraunces,Georgia,serif';x.fillText(t.t,W/2,y0);
+ x.globalAlpha=.7;x.font='500 22px DM Sans,sans-serif';x.fillText(t.a,W/2,y0+34);x.globalAlpha=1;
+ const c=cap.value.trim()||t.c;x.font='600 36px Caveat,cursive';const w=x.measureText(c).width;
+ x.globalAlpha=.4;x.fillStyle=t.k;x.fillRect(W/2-w/2-10,y0+116,w+20,34);x.globalAlpha=1;x.fillStyle='#2b2418';x.fillText(c,W/2,y0+142);
 }
 function setUI(){
  const done=shots.length===4;
- go.disabled=busy||!stream;$('save').disabled=$('share').disabled=!done;$('again').disabled=busy||!shots.length;
+ go.disabled=busy||!stream;$('save').disabled=$('share').disabled=!done;$('cloud').disabled=!done||!sb;$('again').disabled=busy||!shots.length;
  document.documentElement.style.setProperty('--a',T[ti].k);
 }
 function pick(i){
  ti=i;fk=T[i].f[0].toUpperCase()+T[i].f.slice(1);
  document.querySelectorAll('.song').forEach((b,j)=>b.setAttribute('aria-pressed',j===i));
  document.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed',b.textContent===fk));
- applyFilter();drawStrip();setUI();
+ const q=encodeURIComponent(T[i].t+' '+T[i].a);$('sp').href='https://open.spotify.com/search/'+q;$('yt').href='https://music.youtube.com/search?q='+q;
+ v.style.filter=F[fk];drawStrip();setUI();
 }
-function applyFilter(){v.style.filter=F[fk]}
 function grab(){
  const c=document.createElement('canvas');c.width=560;c.height=420;const x=c.getContext('2d');
  const vw=v.videoWidth,vh=v.videoHeight;let sw=vw,sh=vh,sx=0,sy=0;
@@ -130,6 +163,7 @@ async function run(){
   shots.push(grab());drawStrip();await wait(500);
  }
  busy=false;setUI();
+ if(sb){$('askt').textContent=user?'It will be stored in your cloud gallery.':'You will be asked to sign in or create an account first. Nothing is uploaded unless you say yes.';$('ask').showModal()}
 }
 async function cam(){
  $('msg').hidden=true;
@@ -142,14 +176,57 @@ async function cam(){
  setUI();
 }
 function blob(){return new Promise(r=>strip.toBlob(r,'image/png'))}
+async function cloudSave(){
+ if(!sb)return;
+ if(!user){pending=true;return openAuth()}
+ const b=await blob(),path=user.id+'/'+crypto.randomUUID()+'.png',t=T[ti];
+ const up=await sb.storage.from('strips').upload(path,b,{contentType:'image/png'});
+ if(up.error)return toast('Could not upload the strip. Try again.');
+ const ins=await sb.from('strips').insert({song:t.t,artist:t.a,caption:cap.value.trim()||t.c,filter:fk,image_path:path});
+ if(ins.error){await sb.storage.from('strips').remove([path]);return toast('Could not save the strip. Try again.')}
+ toast('Saved to your profile');
+}
+function openAuth(){$('ae').textContent='';$('auth').showModal()}
+function setMode(m){mode=m;$('at').textContent=m==='up'?'Create account':'Sign in';$('as').textContent=m==='up'?'Create account':'Sign in';$('am').textContent=m==='up'?'I have an account':'Create account';$('pw').autocomplete=m==='up'?'new-password':'current-password'}
+function renderAuth(){$('acct').textContent=user?'My strips':'Sign in';$('out').hidden=!user}
+async function gallery(){
+ const box=$('gbox');box.replaceChildren();$('gal').showModal();
+ const r=await sb.from('strips').select('id,song,caption,image_path').order('created_at',{ascending:false}).limit(40);
+ if(r.error){box.textContent='Could not load your strips.';return}
+ if(!r.data.length){box.textContent='No saved strips yet. Take four photos and save one.';return}
+ const u=await sb.storage.from('strips').createSignedUrls(r.data.map(d=>d.image_path),3600);
+ const m=Object.fromEntries((u.data||[]).map(x=>[x.path,x.signedUrl]));
+ r.data.forEach(d=>{
+  const f=document.createElement('figure'),im=new Image(),c=document.createElement('figcaption'),b=document.createElement('b'),s=document.createElement('span'),a=document.createElement('a'),del=document.createElement('button'),mini=document.createElement('div');
+  im.src=m[d.image_path]||'';im.alt=d.song+' strip';im.loading='lazy';b.textContent=d.song;s.textContent=d.caption||'';c.append(b,s);
+  a.href=im.src;a.target='_blank';a.rel='noopener';a.className='btn';a.textContent='Open';
+  del.className='btn ghost';del.textContent='Delete';del.onclick=async()=>{if(!confirm('Delete this strip?'))return;await sb.storage.from('strips').remove([d.image_path]);await sb.from('strips').delete().eq('id',d.id);f.remove()};
+  mini.className='mini';mini.append(a,del);f.append(im,c,mini);box.appendChild(f);
+ });
+}
 $('save').onclick=async()=>{const b=await blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='snapbooth-'+T[ti].t.replace(/\W+/g,'-')+'.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 if(navigator.share&&navigator.canShare)$('share').hidden=false;
 $('share').onclick=async()=>{const f=new File([await blob()],'snapbooth.png',{type:'image/png'});if(navigator.canShare({files:[f]}))try{await navigator.share({files:[f],title:'Snapbooth'})}catch(e){}};
 $('again').onclick=()=>{shots.length=0;drawStrip();setUI()};
 $('retry').onclick=cam;go.onclick=run;cap.oninput=drawStrip;
-Object.keys(F).forEach(k=>{const b=document.createElement('button');b.className='chip';b.textContent=k;b.onclick=()=>{fk=k;document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c===b));applyFilter()};$('filters').appendChild(b)});
-T.forEach((t,i)=>{const b=document.createElement('button');b.className='song';b.style.setProperty('--c',t.k);b.style.setProperty('--t',lum(t.k)>.62?'#1d1d1f':'#fff');b.innerHTML='<b></b><span></span>';b.firstChild.textContent=t.t;b.lastChild.textContent=t.a;b.onclick=()=>pick(i);$('songs').appendChild(b)});
-pick(0);cam();
+$('cloud').onclick=cloudSave;$('yes').onclick=()=>{$('ask').close();cloudSave()};$('no').onclick=()=>$('ask').close();
+$('acct').onclick=()=>user?gallery():openAuth();$('gx').onclick=()=>$('gal').close();$('ax').onclick=()=>{pending=false;$('auth').close()};
+$('am').onclick=()=>setMode(mode==='up'?'in':'up');
+$('out').onclick=async()=>{await sb.auth.signOut();toast('Signed out')};
+$('af').onsubmit=async e=>{
+ e.preventDefault();$('ae').textContent='';const email=$('em').value.trim(),password=$('pw').value;
+ const r=mode==='up'?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+ if(r.error){$('ae').textContent=r.error.message;return}
+ if(mode==='up'&&!r.data.session){$('ae').textContent='Check your email to confirm your account, then sign in.';setMode('in');return}
+ $('auth').close();
+};
+if(sb){
+ sb.auth.getSession().then(r=>{user=r.data.session?r.data.session.user:null;renderAuth()});
+ sb.auth.onAuthStateChange((ev,s)=>{user=s?s.user:null;renderAuth();if(user&&pending){pending=false;setTimeout(cloudSave,0)}});
+}else{$('acct').hidden=true}
+Object.keys(F).forEach(k=>{const b=document.createElement('button');b.className='chip';b.textContent=k;b.onclick=()=>{fk=k;document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c===b));v.style.filter=F[k]};$('filters').appendChild(b)});
+T.forEach((t,i)=>{const b=document.createElement('button');b.className='song';b.style.setProperty('--c',t.k);b.style.setProperty('--t',lum(t.k)>.62?'#2b2418':'#fff');b.innerHTML='<b></b><span></span>';b.firstChild.textContent=t.t;b.lastChild.textContent=t.a;b.onclick=()=>pick(i);$('songs').appendChild(b)});
+pick(0);fonts().then(drawStrip);cam();
 </script>
 </body>
 </html>
